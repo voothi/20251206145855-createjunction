@@ -1,20 +1,17 @@
 @echo off
 setlocal
 
-:: 1. Check Input
+:: --- STEP 1: Check Input ---
 if "%~1"=="" (
     echo [ERROR] No input detected.
-    echo Please use the "Send to" context menu.
-    pause
-    exit /b
+    echo Please run this script via the "Send To" context menu.
+    goto :End
 )
 
-:: 2. Check if Source is a Folder
 if not exist "%~1\" (
-    echo [ERROR] Invalid target.
-    echo Junctions (/J) can only be created for FOLDERS.
-    pause
-    exit /b
+    echo [ERROR] The selected item is NOT a folder.
+    echo Junctions can only be created for folders.
+    goto :End
 )
 
 set "SourcePath=%~1"
@@ -23,45 +20,59 @@ set "FolderName=%~nx1"
 echo.
 echo Source: "%SourcePath%"
 echo.
-echo ==========================================
-echo   Select the DESTINATION folder in the
-echo   pop-up window...
-echo ==========================================
+echo -------------------------------------------------------
+echo Opening Folder Selection Dialog...
+echo (Please check your taskbar if the window is hidden)
+echo -------------------------------------------------------
 
-:: 3. Open "Browse For Folder" Dialog via PowerShell
-set "PSCmd="(new-object -COM 'Shell.Application').BrowseForFolder(0,'Select the folder where you want to create the Junction link:',0,0).self.path""
+:: --- STEP 2: Create a temporary PowerShell script ---
+:: This avoids syntax errors with quotes in CMD
+set "PSFile=%TEMP%\ChooseFolder_%RANDOM%.ps1"
 
-set "ParentDir="
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command %PSCmd%`) do set "ParentDir=%%I"
+(
+    echo $app = New-Object -COM 'Shell.Application'
+    echo $folder = $app.BrowseForFolder(0, 'Select the DESTINATION folder:', 0, 0^)
+    echo if ^($folder^) { $folder.Self.Path }
+) > "%PSFile%"
 
-:: 4. Check if user cancelled
-if not defined ParentDir (
-    echo.
-    echo [INFO] Operation cancelled by user.
-    timeout /t 2 >nul
-    exit /b
+:: --- STEP 3: Run the PowerShell script and capture output ---
+set "TargetDir="
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PSFile%"`) do (
+    set "TargetDir=%%I"
 )
 
-:: 5. Construct Final Path
-:: The link will have the same name as the original folder
-set "LinkPath=%ParentDir%\%FolderName%"
+:: Clean up temp file
+del "%PSFile%"
+
+:: --- STEP 4: Validate Selection ---
+if "%TargetDir%"=="" (
+    echo.
+    echo [CANCELED] No folder selected or operation canceled.
+    goto :End
+)
+
+:: --- STEP 5: Create Junction ---
+set "LinkPath=%TargetDir%\%FolderName%"
 
 echo.
 echo Creating Junction...
-echo Link:   "%LinkPath%"
-echo Target: "%SourcePath%"
-echo.
+echo -------------------------------------------------------
+echo FROM: "%LinkPath%"
+echo TO:   "%SourcePath%"
+echo -------------------------------------------------------
 
-:: 6. Create Junction
 mklink /J "%LinkPath%" "%SourcePath%"
 
 if %errorlevel%==0 (
     echo.
     echo [SUCCESS] Junction created successfully!
-    timeout /t 3 >nul
 ) else (
     echo.
     echo [ERROR] Failed to create Junction.
-    echo A folder with this name might already exist in the destination.
-    pause
+    echo Check if the folder name already exists in the destination.
 )
+
+:End
+echo.
+echo Press any key to close...
+pause >nul
