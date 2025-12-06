@@ -1,0 +1,33 @@
+# General
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# .NET / C#
+bin/
+obj/
+*.user
+*.pdb
+*.suo
+*.cache
+appsettings.Development.json
+*.dll
+*.exe
+*.xml
+
+# Node.js / Frontend
+node_modules/
+dist/
+build/
+.env
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+.npm/
+
+.history/
