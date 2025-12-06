@@ -1,57 +1,67 @@
 @echo off
-setlocal enableextensions
-
-echo --- DIAGNOSTICS START ---
+setlocal
 
 :: 1. Check Input
 if "%~1"=="" (
     echo [ERROR] No input detected.
-    echo Please use "Send To".
-    goto :FinalEnd
+    echo Please use the "Send to" context menu.
+    pause
+    exit /b
 )
 
-:: 2. Check if Folder
+:: 2. Check if Source is a Folder
 if not exist "%~1\" (
-    echo [ERROR] Target is not a folder.
-    echo You selected: "%~1"
-    goto :FinalEnd
+    echo [ERROR] Invalid target.
+    echo Junctions (/J) can only be created for FOLDERS.
+    pause
+    exit /b
 )
 
 set "SourcePath=%~1"
-echo Source Folder: "%SourcePath%"
+set "FolderName=%~nx1"
 
-:: 3. Detect Desktop (Stable Method)
-:: By default, assume standard Desktop
-set "RealDesktop=%USERPROFILE%\Desktop"
+echo.
+echo Source: "%SourcePath%"
+echo.
+echo ==========================================
+echo   Select the DESTINATION folder in the
+echo   pop-up window...
+echo ==========================================
 
-:: Check if OneDrive Desktop exists and use it if found
-if defined OneDrive (
-    if exist "%OneDrive%\Desktop" (
-        set "RealDesktop=%OneDrive%\Desktop"
-        echo [INFO] OneDrive Desktop detected.
-    )
+:: 3. Open "Browse For Folder" Dialog via PowerShell
+set "PSCmd="(new-object -COM 'Shell.Application').BrowseForFolder(0,'Select the folder where you want to create the Junction link:',0,0).self.path""
+
+set "ParentDir="
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command %PSCmd%`) do set "ParentDir=%%I"
+
+:: 4. Check if user cancelled
+if not defined ParentDir (
+    echo.
+    echo [INFO] Operation cancelled by user.
+    timeout /t 2 >nul
+    exit /b
 )
 
-echo Target Desktop: "%RealDesktop%"
+:: 5. Construct Final Path
+:: The link will have the same name as the original folder
+set "LinkPath=%ParentDir%\%FolderName%"
 
-:: 4. Construct Path
-set "DestPath=%RealDesktop%\%~n1 - Junction"
-echo Link Path: "%DestPath%"
-
-:: 5. Execute
 echo.
-echo Attempting to create junction...
-echo ------------------------------
-mklink /J "%DestPath%" "%SourcePath%"
-echo ------------------------------
+echo Creating Junction...
+echo Link:   "%LinkPath%"
+echo Target: "%SourcePath%"
+echo.
+
+:: 6. Create Junction
+mklink /J "%LinkPath%" "%SourcePath%"
 
 if %errorlevel%==0 (
-    echo [SUCCESS] Created successfully!
+    echo.
+    echo [SUCCESS] Junction created successfully!
+    timeout /t 3 >nul
 ) else (
-    echo [ERROR] Code: %errorlevel%. Check permissions or if name exists.
+    echo.
+    echo [ERROR] Failed to create Junction.
+    echo A folder with this name might already exist in the destination.
+    pause
 )
-
-:FinalEnd
-echo.
-echo Press any key to close...
-pause
