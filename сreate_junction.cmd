@@ -39,27 +39,34 @@ set /p "LinkPath=Full Junction Path: "
 
 if defined LinkPath goto :ValidateTarget
 
-:: --- STEP 2: GUI Input Fallback ---
+
+
+:: --- STEP 2: GUI Input Fallback (Folder Tree) ---
 echo.
-echo Opening GUI Input Window...
+echo Opening Folder Selection Window...
 echo (Please check your taskbar if the window is hidden)
 
 set "PSFile=%TEMP%\AskPath_%RANDOM%.ps1"
 
 (
-    echo Add-Type -AssemblyName Microsoft.VisualBasic
-    echo $msg = "Enter the FULL PATH for the new junction." + [Environment]::NewLine + [Environment]::NewLine + "Example: D:\Links\%FolderName%"
-    echo $title = "Select Junction Destination"
-    echo $default = "D:\Links\%FolderName%"
-    echo $path = [Microsoft.VisualBasic.Interaction]::InputBox^($msg, $title, $default^)
-    echo if ^(![string]::IsNullOrWhiteSpace^($path^)^) { $path }
+    echo $app = New-Object -COM 'Shell.Application'
+    echo $folder = $app.BrowseForFolder(0, 'Select the PARENT folder for the junction:', 0, 0^)
+    echo if ^($folder^) { $folder.Self.Path }
 ) > "%PSFile%"
 
+set "SelectedDir="
 for /f "usebackq delims=" %%I in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PSFile%"`) do (
-    set "LinkPath=%%I"
+    set "SelectedDir=%%I"
 )
 
 del "%PSFile%"
+
+if defined SelectedDir (
+    :: If user picked a folder via GUI, append the junction name
+    set "LinkPath=%SelectedDir%\%FolderName%"
+)
+
+
 
 :ValidateTarget
 if "%LinkPath%"=="" (
