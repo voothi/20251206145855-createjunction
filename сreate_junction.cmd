@@ -43,7 +43,11 @@ set /p "LinkPath=Full Junction Path: "
 if not defined LinkPath goto :ShowGUI
 set "TestInput=%LinkPath: =%"
 
-if "%TestInput%"=="" goto :ShowGUI
+
+if "%TestInput%"=="" (
+    set "LinkPath="
+    goto :ShowGUI
+)
 
 :: Trim leading spaces
 for /f "tokens=*" %%A in ("%LinkPath%") do set "LinkPath=%%A"
