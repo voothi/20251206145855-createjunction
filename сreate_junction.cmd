@@ -18,6 +18,7 @@ set "SourcePath=%~1"
 set "FolderName=%~nx1"
 
 
+
 echo.
 echo Source Folder: "%SourcePath%"
 echo Junction Name: "%FolderName%"
@@ -25,18 +26,18 @@ echo.
 echo -------------------------------------------------------
 echo DESTINATION SELECTION
 echo -------------------------------------------------------
-echo Please enter the PARENT directory where the junction will be created.
-echo (Do NOT include the junction name in the path)
+echo Please enter the FULL PATH for the new junction.
+echo (Include the name of the junction itself)
 echo.
-echo Example: If you enter "D:\MyLinks", the junction will be "D:\MyLinks\%FolderName%"
+echo Example: "D:\MyLinks\%FolderName%" or "C:\Archive\MyLinkName"
 echo.
 echo [Press ENTER without typing to open a GUI Input Window]
 echo.
 
-set "TargetDir="
-set /p "TargetDir=Destination Parent Path: "
+set "LinkPath="
+set /p "LinkPath=Full Junction Path: "
 
-if defined TargetDir goto :ValidateTarget
+if defined LinkPath goto :ValidateTarget
 
 :: --- STEP 2: GUI Input Fallback ---
 echo.
@@ -47,39 +48,55 @@ set "PSFile=%TEMP%\AskPath_%RANDOM%.ps1"
 
 (
     echo Add-Type -AssemblyName Microsoft.VisualBasic
-    echo $msg = "Enter the PARENT DIRECTORY path where the junction will be created." + [Environment]::NewLine + [Environment]::NewLine + "The junction will be named: %FolderName%" + [Environment]::NewLine + [Environment]::NewLine + "Do NOT include the junction name in the path."
+    echo $msg = "Enter the FULL PATH for the new junction." + [Environment]::NewLine + [Environment]::NewLine + "Example: D:\Links\%FolderName%"
     echo $title = "Select Junction Destination"
-    echo $path = [Microsoft.VisualBasic.Interaction]::InputBox^($msg, $title, ""^)
+    echo $default = "D:\Links\%FolderName%"
+    echo $path = [Microsoft.VisualBasic.Interaction]::InputBox^($msg, $title, $default^)
     echo if ^(![string]::IsNullOrWhiteSpace^($path^)^) { $path }
 ) > "%PSFile%"
 
 for /f "usebackq delims=" %%I in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PSFile%"`) do (
-    set "TargetDir=%%I"
+    set "LinkPath=%%I"
 )
 
 del "%PSFile%"
 
 :ValidateTarget
-if "%TargetDir%"=="" (
+if "%LinkPath%"=="" (
     echo.
-    echo [CANCELED] No folder provided.
+    echo [CANCELED] No path provided.
     goto :End
 )
 
 :: Remove surrounding quotes if user entered them
-set "TargetDir=%TargetDir:"=%"
+set "LinkPath=%LinkPath:"=%"
 
-if not exist "%TargetDir%\" (
+:: Validate that the link doesn't already exist
+if exist "%LinkPath%\" (
     echo.
-    echo [ERROR] Destination directory does not exist:
-    echo "%TargetDir%"
-    echo Please ensure the parent folder exists.
+    echo [ERROR] The target path already exists as a folder:
+    echo "%LinkPath%"
+    echo Junction cannot be created over an existing folder.
+    goto :End
+)
+if exist "%LinkPath%" (
+    echo.
+    echo [ERROR] The target path already exists as a file:
+    echo "%LinkPath%"
+    goto :End
+)
+
+:: Validate parent directory exists (a bit tricky in pure batch for arbitrary input, but let's try basic check)
+for %%I in ("%LinkPath%") do set "ParentDir=%%~dpI"
+if not exist "%ParentDir%" (
+    echo.
+    echo [ERROR] The parent directory does not exist:
+    echo "%ParentDir%"
+    echo Please create the parent folder first.
     goto :End
 )
 
 :: --- STEP 3: Create Junction ---
-set "LinkPath=%TargetDir%\%FolderName%"
-
 echo.
 echo Creating Junction...
 echo -------------------------------------------------------
@@ -95,7 +112,6 @@ if %errorlevel%==0 (
 ) else (
     echo.
     echo [ERROR] Failed to create Junction.
-    echo Check if "%FolderName%" already exists in "%TargetDir%".
 )
 
 :End
