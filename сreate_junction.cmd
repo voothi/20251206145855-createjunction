@@ -19,6 +19,8 @@ set "FolderName=%~nx1"
 
 
 
+
+:AskPath
 echo.
 echo Source Folder: "%SourcePath%"
 echo Junction Name: "%FolderName%"
@@ -79,8 +81,8 @@ if defined SelectedDir (
 :ValidateTarget
 if "%LinkPath%"=="" (
     echo.
-    echo [CANCELED] No path provided.
-    goto :End
+    echo [CANCELED] No path provided. Returning to selection...
+    goto :AskPath
 )
 
 :: Remove surrounding quotes if user entered them
