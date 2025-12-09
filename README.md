@@ -4,7 +4,19 @@ A powerful Windows Batch script that allows you to create **Directory Junctions*
 
 It gives you full control over where the junction is created, offering both **Console Input** and a **GUI Folder Picker**.
 
-## 🚀 Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Source Code](#source-code)
+- [License](#license)
+
+---
+
+## Features
 
 *   **Hybrid Input:**
     *   **Console:** Paste the full path directly (great for power users).
@@ -14,11 +26,13 @@ It gives you full control over where the junction is created, offering both **Co
 *   **Safety Loops:** If you cancel the selection or make a mistake, the script loops back instead of closing, allowing you to try again.
 *   **Clean Input:** Automatically trims accidental leading spaces from pasted paths.
 
-## 📥 Installation
+[Return to Top](#table-of-contents)
+
+## Installation
 
 1.  **Download/Create the script:**
     *   Create a file named `create_junction.cmd`.
-    *   Paste the code from the **[Source Code](#-source-code)** section below.
+    *   Paste the code from the **[Source Code](#source-code)** section below.
     *   Save it in a safe location (e.g., `C:\Scripts\`).
 
 2.  **Open the "Send To" folder:**
@@ -29,7 +43,9 @@ It gives you full control over where the junction is created, offering both **Co
     *   Select **"Create shortcuts here"**.
     *   Rename the shortcut to **`Create Junction`**.
 
-## 🛠 Usage
+[Return to Top](#table-of-contents)
+
+## Usage
 
 1.  **Right-click** the source folder you want to link **TO**.
 2.  Select **Send to** -> **Create Junction**.
@@ -40,10 +56,16 @@ It gives you full control over where the junction is created, offering both **Co
 
 > **Note:** Directory Junctions act like hard links for folders. Deleting the junction **does not** delete the original files.
 
-## 💻 Source Code
+[Return to Top](#table-of-contents)
+
+## Source Code
 
 *(Please refer to the `create_junction.cmd` file in this repository for the latest version)*
 
-## 📄 License
+[Return to Top](#table-of-contents)
+
+## License
 
 This project is open source and available under the [MIT License](LICENSE).
+
+[Return to Top](#table-of-contents)
