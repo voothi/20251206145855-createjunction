@@ -37,10 +37,18 @@ echo.
 set "LinkPath="
 set /p "LinkPath=Full Junction Path: "
 
-if defined LinkPath goto :ValidateTarget
+:: If not defined or only spaces, fall through to GUI
+if not defined LinkPath goto :ShowGUI
+set "TestInput=%LinkPath: =%"
 
+if "%TestInput%"=="" goto :ShowGUI
 
+:: Trim leading spaces
+for /f "tokens=*" %%A in ("%LinkPath%") do set "LinkPath=%%A"
 
+goto :ValidateTarget
+
+:ShowGUI
 :: --- STEP 2: GUI Input Fallback (Folder Tree) ---
 echo.
 echo Opening Folder Selection Window...
