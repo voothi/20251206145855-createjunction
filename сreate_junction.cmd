@@ -146,6 +146,10 @@ while ($true) {
     $inputPath = Read-Host "Full Destination Path"
     
     if ([string]::IsNullOrWhiteSpace($inputPath)) {
+        if ($env:TEST_MODE -eq "1") {
+            Write-Host "`n[ERROR] Target path cannot be empty in test mode." -ForegroundColor Red
+            continue
+        }
         Write-Host "`nOpening Folder Selection Window..."
         $app = New-Object -ComObject Shell.Application
         $folder = $app.BrowseForFolder(0, 'Select the PARENT folder for the link/clone:', 0, 0)
@@ -257,5 +261,7 @@ try {
     Write-Host "$($_.Exception.Message)" -ForegroundColor Red
 }
 
-Write-Host "`nPress Enter to close..."
-[void](Read-Host)
+if ($env:TEST_MODE -ne "1") {
+    Write-Host "`nPress Enter to close..."
+    [void](Read-Host)
+}

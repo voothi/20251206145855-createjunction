@@ -12,6 +12,7 @@ It works for both files and folders, giving you full control over where the link
 - [Installation](#installation)
 - [Usage](#usage)
 - [Link and Copy Type Comparison (Restrictions)](#link-and-copy-type-comparison-restrictions)
+- [Running Tests](#running-tests)
 - [Source Code](#source-code)
 - [License](#license)
 
@@ -74,6 +75,19 @@ It works for both files and folders, giving you full control over where the link
 | **Hard Link** (`/H`) | Yes (Strictly same NTFS partition) | No (File stays alive under the new path) | Yes (Both paths point to the exact same data) | `mklink /H "C:\Target\AGENTS.md" "C:\Source\AGENTS.md"` |
 | **Symbolic Link** (Symlink) | No (Works across different drives) | Yes (Becomes a broken shortcut) | Yes (Modifying the link changes the original file) | `mklink "D:\Target\AGENTS.md" "C:\Source\AGENTS.md"` |
 | **CoW Clone** (Block Clone) | Yes (Strictly same ReFS / Dev Drive) | No (Acts as an independent copy) | No (Edits remain isolated to each file) | `Copy-Item -Path "C:\Src\AGENTS.md" -Destination "C:\Dst\AGENTS.md"` |
+
+[Return to Top](#table-of-contents)
+
+## Running Tests
+
+An automated test suite is available under the `tests/` directory to verify the link and clone creation functionality.
+
+To run the tests, execute the following command in PowerShell from the repository root:
+```powershell
+powershell -File tests/test.ps1
+```
+
+The test suite will prepare a temporary sandbox, run operations non-interactively using automated inputs, validate the output structures (including hard link shared filesystem index validation), and clean up afterwards.
 
 [Return to Top](#table-of-contents)
 

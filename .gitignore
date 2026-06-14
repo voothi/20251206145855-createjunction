@@ -31,3 +31,6 @@ coverage/
 .npm/
 
 .history/
+
+# Testing
+**/test_sandbox/
