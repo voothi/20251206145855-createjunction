@@ -1,8 +1,8 @@
-# Windows Junction Creator (Context Menu)
+# Windows Link and Clone Creator (Context Menu)
 
-A powerful Windows Batch script that allows you to create **Directory Junctions** (`mklink /J`) directly from the Windows File Explorer context menu via the "Send to" feature.
+A powerful Windows script that allows you to create **Directory Junctions**, **Symbolic Links**, **Hard Links**, and **Copy-on-Write (CoW) Clones** directly from the Windows File Explorer context menu via the "Send to" feature.
 
-It gives you full control over where the junction is created, offering both **Console Input** and a **GUI Folder Picker**.
+It works for both files and folders, giving you full control over where the link/clone is created, offering both **Console Input** and a **GUI Folder Picker**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
@@ -18,15 +18,19 @@ It gives you full control over where the junction is created, offering both **Co
 
 ## Features
 
+*   **Support for Files and Folders:** Works seamlessly for both file inputs and folder inputs.
+*   **Multiple Link Types:**
+    *   **Directory Junctions:** Standard junctions (`mklink /J`) for folders.
+    *   **Symbolic Links:** Soft links for files or folders (`mklink`/`mklink /D`). (Requires Developer Mode or Administrator privileges).
+    *   **Hard Links:** Hard links for files (`mklink /H`).
+    *   **Copy-on-Write (CoW) Clones:** Hardware-accelerated file duplication (block cloning) on ReFS and Dev Drive volumes using raw Windows file systems APIs. (Recursively copies and clones directories if selected on folders).
 *   **Hybrid Input:**
     *   **Console:** Paste the full path directly (great for power users).
     *   **GUI:** Press *Enter* to open a Folder Selection window (great for browsing).
-*   **Full Control:** You specify the **full path**, including the name of the new junction link.
+*   **Full Control:** You specify the **full path**, including the name of the new link/clone.
 *   **Smart Validation:** Checks if the parent folder exists and prevents overwriting existing files/folders.
 *   **Safety Loops:** If you cancel the selection or make a mistake, the script loops back instead of closing, allowing you to try again.
 *   **Clean Input:** Automatically trims accidental leading spaces from pasted paths.
-
-[Return to Top](#table-of-contents)
 
 ## Installation
 
@@ -47,14 +51,17 @@ It gives you full control over where the junction is created, offering both **Co
 
 ## Usage
 
-1.  **Right-click** the source folder you want to link **TO**.
-2.  Select **Send to** -> **Create Junction**.
-3.  A console window will appear asking for the **Full Junction Path**.
+1.  **Right-click** the source file or folder you want to link/clone **TO**.
+2.  Select **Send to** -> **Create Junction** (or whatever name you chose for your shortcut).
+3.  A console window will appear asking for the **Full Destination Path**.
     *   **Option A (Manual):** Paste or type the full path (e.g., `D:\Games\MyLink`) and press Enter.
     *   **Option B (GUI):** Just press **Enter** (empty input). A folder picker window will open. Select the *parent directory*, and the script will automatically name the link same as the source.
-4.  The Junction is created immediately.
+4.  Next, a **Link/Clone Type Selection** menu will appear. Enter the number [1-3] of the operation you want to perform:
+    *   **If linking a folder:** Choice 1 (Directory Junction), Choice 2 (Directory Symbolic Link), Choice 3 (Copy-on-Write Clone).
+    *   **If linking a file:** Choice 1 (Symbolic Link), Choice 2 (Hard Link), Choice 3 (Copy-on-Write Clone).
+5.  The operation will be executed immediately, and a success or error message will be displayed.
 
-> **Note:** Directory Junctions act like hard links for folders. Deleting the junction **does not** delete the original files.
+> **Note:** Directory Junctions act like hard links for folders. Deleting any type of link or Copy-on-Write clone **does not** delete or affect the original files/folders. Copy-on-Write clones are real, independent copies on disk that share physical data blocks at the file system level until modified.
 
 [Return to Top](#table-of-contents)
 

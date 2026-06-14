@@ -1,141 +1,261 @@
 @echo off
 setlocal
+set "SRC_PATH=%~1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -LiteralPath '%~f0' | Select-Object -Skip 6 | Out-String | Invoke-Expression"
+endlocal
+exit /b
 
-:: --- STEP 1: Check Input ---
-if "%~1"=="" (
-    echo [ERROR] No input detected.
-    echo Please run this script via the "Send To" context menu.
-    goto :End
-)
+# PowerShell Code Starts Here
+$SourcePath = $env:SRC_PATH
 
-if not exist "%~1\" (
-    echo [ERROR] The selected item is NOT a folder.
-    echo Junctions can only be created for folders.
-    goto :End
-)
+if ([string]::IsNullOrEmpty($SourcePath)) {
+    Write-Host "[ERROR] No input detected." -ForegroundColor Red
+    Write-Host "Please run this script via the 'Send To' context menu."
+    Write-Host "`nPress Enter to close..."
+    [void](Read-Host)
+    exit 1
+}
 
-set "SourcePath=%~1"
-set "FolderName=%~nx1"
+if (!(Test-Path $SourcePath)) {
+    Write-Host "[ERROR] The selected item does not exist: $SourcePath" -ForegroundColor Red
+    Write-Host "`nPress Enter to close..."
+    [void](Read-Host)
+    exit 1
+}
 
+$FolderName = Split-Path $SourcePath -Leaf
+$IsFolder = Test-Path $SourcePath -PathType Container
 
+# Register block clone C# structures/methods
+$code = @"
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
+public static class BlockClone {
+    private const uint FSCTL_DUPLICATE_EXTENTS_TO_FILE = 0x0009034c;
 
-:AskPath
-echo.
-echo Source Folder: "%SourcePath%"
-echo Junction Name: "%FolderName%"
-echo.
-echo -------------------------------------------------------
-echo DESTINATION SELECTION
-echo -------------------------------------------------------
-echo Please enter the FULL PATH for the new junction.
-echo (Include the name of the junction itself)
-echo.
-echo Example: "D:\MyLinks\%FolderName%" or "C:\Archive\MyLinkName"
-echo.
-echo [Press ENTER without typing to open a GUI Input Window]
-echo.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DUPLICATE_EXTENTS_DATA {
+        public IntPtr FileHandle;
+        public long SourceFileOffset;
+        public long TargetFileOffset;
+        public long ByteCount;
+    }
 
-set "LinkPath="
-set /p "LinkPath=Full Junction Path: "
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeviceIoControl(
+        SafeFileHandle hDevice,
+        uint dwIoControlCode,
+        ref DUPLICATE_EXTENTS_DATA lpInBuffer,
+        uint nInBufferSize,
+        IntPtr lpOutBuffer,
+        uint nOutBufferSize,
+        out uint lpBytesReturned,
+        IntPtr lpOverlapped
+    );
 
-:: If not defined or only spaces, fall through to GUI
-if not defined LinkPath goto :ShowGUI
-set "TestInput=%LinkPath: =%"
+    public static void CloneFile(string sourcePath, string targetPath) {
+        sourcePath = Path.GetFullPath(sourcePath);
+        targetPath = Path.GetFullPath(targetPath);
 
+        FileInfo sourceInfo = new FileInfo(sourcePath);
+        if (!sourceInfo.Exists) {
+            throw new FileNotFoundException("Source file not found", sourcePath);
+        }
+        long size = sourceInfo.Length;
 
-if "%TestInput%"=="" (
-    set "LinkPath="
-    goto :ShowGUI
-)
+        if (File.Exists(targetPath)) {
+            File.Delete(targetPath);
+        }
 
-:: Trim leading spaces
-for /f "tokens=*" %%A in ("%LinkPath%") do set "LinkPath=%%A"
+        using (FileStream fs = File.Create(targetPath)) {
+            if (size > 0) {
+                fs.SetLength(size);
+            }
+        }
 
-goto :ValidateTarget
+        if (size == 0) {
+            return;
+        }
 
-:ShowGUI
-:: --- STEP 2: GUI Input Fallback (Folder Tree) ---
-echo.
-echo Opening Folder Selection Window...
-echo (Please check your taskbar if the window is hidden)
+        using (FileStream sourceStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using (FileStream targetStream = new FileStream(targetPath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) {
+            SafeFileHandle sourceHandle = sourceStream.SafeFileHandle;
+            SafeFileHandle targetHandle = targetStream.SafeFileHandle;
 
-set "PSFile=%TEMP%\AskPath_%RANDOM%.ps1"
+            DUPLICATE_EXTENTS_DATA data = new DUPLICATE_EXTENTS_DATA {
+                FileHandle = sourceHandle.DangerousGetHandle(),
+                SourceFileOffset = 0,
+                TargetFileOffset = 0,
+                ByteCount = size
+            };
 
-(
-    echo $app = New-Object -COM 'Shell.Application'
-    echo $folder = $app.BrowseForFolder(0, 'Select the PARENT folder for the junction:', 0, 0^)
-    echo if ^($folder^) { $folder.Self.Path }
-) > "%PSFile%"
+            uint bytesReturned = 0;
+            bool success = DeviceIoControl(
+                targetHandle,
+                FSCTL_DUPLICATE_EXTENTS_TO_FILE,
+                ref data,
+                (uint)Marshal.SizeOf(data),
+                IntPtr.Zero,
+                0,
+                out bytesReturned,
+                IntPtr.Zero
+            );
 
-set "SelectedDir="
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PSFile%"`) do (
-    set "SelectedDir=%%I"
-)
+            if (!success) {
+                int error = Marshal.GetLastWin32Error();
+                throw new System.ComponentModel.Win32Exception(error);
+            }
+        }
+    }
+}
+"@
 
-del "%PSFile%"
+# Helper function for recursive cloning of directories
+function Clone-Directory($src, $dst) {
+    if (!(Test-Path $dst)) {
+        New-Item -ItemType Directory -Path $dst | Out-Null
+    }
+    Get-ChildItem $src -Force | ForEach-Object {
+        $srcPath = $_.FullName
+        $dstPath = Join-Path $dst $_.Name
+        if ($_.PSIsContainer) {
+            Clone-Directory $srcPath $dstPath
+        } else {
+            [BlockClone]::CloneFile($srcPath, $dstPath)
+        }
+    }
+}
 
-if defined SelectedDir (
-    :: If user picked a folder via GUI, append the junction name
-    set "LinkPath=%SelectedDir%\%FolderName%"
-)
+$LinkPath = ""
 
+while ($true) {
+    Write-Host "`nSource Path: `"$SourcePath`""
+    Write-Host "Name: `"$FolderName`""
+    Write-Host "-------------------------------------------------------"
+    Write-Host "DESTINATION SELECTION"
+    Write-Host "-------------------------------------------------------"
+    Write-Host "Please enter the FULL PATH for the new link/clone."
+    Write-Host "(Include the name of the link itself)"
+    Write-Host "`nExample: `"D:\MyLinks\$FolderName`" or `"C:\Archive\MyLinkName`""
+    Write-Host "`n[Press ENTER without typing to open a GUI Folder Picker]"
+    
+    $inputPath = Read-Host "Full Destination Path"
+    
+    if ([string]::IsNullOrWhiteSpace($inputPath)) {
+        Write-Host "`nOpening Folder Selection Window..."
+        $app = New-Object -ComObject Shell.Application
+        $folder = $app.BrowseForFolder(0, 'Select the PARENT folder for the link/clone:', 0, 0)
+        if ($folder) {
+            $SelectedDir = $folder.Self.Path
+            $LinkPath = Join-Path $SelectedDir $FolderName
+        } else {
+            Write-Host "`n[CANCELED] No folder selected. Returning to selection..." -ForegroundColor Yellow
+            continue
+        }
+    } else {
+        $LinkPath = $inputPath
+    }
+    
+    # Clean surrounding quotes
+    $LinkPath = $LinkPath -replace '"', ''
+    
+    # Validate
+    if (Test-Path $LinkPath) {
+        Write-Host "`n[ERROR] The target path already exists: `"$LinkPath`"" -ForegroundColor Red
+        Write-Host "Please enter a unique target path."
+        continue
+    }
+    
+    $ParentDir = Split-Path $LinkPath -Parent
+    if (-not [string]::IsNullOrEmpty($ParentDir) -and -not (Test-Path $ParentDir)) {
+        Write-Host "`n[ERROR] The parent directory does not exist: `"$ParentDir`"" -ForegroundColor Red
+        Write-Host "Please create the parent folder first or enter another path."
+        continue
+    }
+    
+    break
+}
 
+while ($true) {
+    Write-Host "`n-------------------------------------------------------"
+    Write-Host "LINK/CLONE TYPE SELECTION"
+    Write-Host "-------------------------------------------------------"
+    
+    if ($IsFolder) {
+        Write-Host "[1] Directory Junction (Default)"
+        Write-Host "[2] Directory Symbolic Link (Requires Dev Mode/Admin)"
+        Write-Host "[3] Copy-on-Write Clone (ReFS/Dev Drive only)"
+    } else {
+        Write-Host "[1] Symbolic Link (Default, Requires Dev Mode/Admin)"
+        Write-Host "[2] Hard Link"
+        Write-Host "[3] Copy-on-Write Clone (ReFS/Dev Drive only)"
+    }
+    Write-Host ""
+    
+    $Choice = Read-Host "Enter choice [1-3] (Default: 1)"
+    if ([string]::IsNullOrWhiteSpace($Choice)) {
+        $Choice = "1"
+    }
+    
+    if ($Choice -match '^[1-3]$') {
+        break
+    }
+    Write-Host "Invalid choice. Please try again." -ForegroundColor Red
+}
 
-:ValidateTarget
-if "%LinkPath%"=="" (
-    echo.
-    echo [CANCELED] No path provided. Returning to selection...
-    goto :AskPath
-)
+Write-Host "`nCreating..."
+Write-Host "-------------------------------------------------------"
+Write-Host "FROM: `"$LinkPath`""
+Write-Host "TO:   `"$SourcePath`""
+Write-Host "-------------------------------------------------------"
 
-:: Remove surrounding quotes if user entered them
-set "LinkPath=%LinkPath:"=%"
+try {
+    if ($Choice -eq "3") {
+        # Lazy compile the C# P/Invoke helper
+        Add-Type -TypeDefinition $code -ErrorAction Stop
+        
+        $createdTarget = $false
+        if (!(Test-Path $LinkPath)) {
+            $createdTarget = $true
+        }
+        
+        try {
+            if ($IsFolder) {
+                Clone-Directory $SourcePath $LinkPath
+            } else {
+                [BlockClone]::CloneFile($SourcePath, $LinkPath)
+            }
+            Write-Host "`n[SUCCESS] Copy-on-Write Clone created successfully!" -ForegroundColor Green
+        } catch {
+            if ($createdTarget -and (Test-Path $LinkPath)) {
+                Remove-Item $LinkPath -Recurse -Force | Out-Null
+            }
+            throw
+        }
+    } else {
+        if ($IsFolder) {
+            if ($Choice -eq "1") {
+                New-Item -ItemType Junction -Path $LinkPath -Value $SourcePath -ErrorAction Stop | Out-Null
+            } else {
+                New-Item -ItemType SymbolicLink -Path $LinkPath -Value $SourcePath -ErrorAction Stop | Out-Null
+            }
+        } else {
+            if ($Choice -eq "1") {
+                New-Item -ItemType SymbolicLink -Path $LinkPath -Value $SourcePath -ErrorAction Stop | Out-Null
+            } else {
+                New-Item -ItemType HardLink -Path $LinkPath -Value $SourcePath -ErrorAction Stop | Out-Null
+            }
+        }
+        Write-Host "`n[SUCCESS] Link created successfully!" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "`n[ERROR] Failed to perform the operation." -ForegroundColor Red
+    Write-Host "$($_.Exception.Message)" -ForegroundColor Red
+}
 
-:: Validate that the link doesn't already exist
-if exist "%LinkPath%\" (
-    echo.
-    echo [ERROR] The target path already exists as a folder:
-    echo "%LinkPath%"
-    echo Junction cannot be created over an existing folder.
-    goto :End
-)
-if exist "%LinkPath%" (
-    echo.
-    echo [ERROR] The target path already exists as a file:
-    echo "%LinkPath%"
-    goto :End
-)
-
-:: Validate parent directory exists (a bit tricky in pure batch for arbitrary input, but let's try basic check)
-for %%I in ("%LinkPath%") do set "ParentDir=%%~dpI"
-if not exist "%ParentDir%" (
-    echo.
-    echo [ERROR] The parent directory does not exist:
-    echo "%ParentDir%"
-    echo Please create the parent folder first.
-    goto :End
-)
-
-:: --- STEP 3: Create Junction ---
-echo.
-echo Creating Junction...
-echo -------------------------------------------------------
-echo FROM: "%LinkPath%"
-echo TO:   "%SourcePath%"
-echo -------------------------------------------------------
-
-mklink /J "%LinkPath%" "%SourcePath%"
-
-if %errorlevel%==0 (
-    echo.
-    echo [SUCCESS] Junction created successfully!
-) else (
-    echo.
-    echo [ERROR] Failed to create Junction.
-)
-
-:End
-echo.
-echo Press any key to close...
-pause >nul
+Write-Host "`nPress Enter to close..."
+[void](Read-Host)
