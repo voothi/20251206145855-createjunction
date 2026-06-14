@@ -11,6 +11,7 @@ It works for both files and folders, giving you full control over where the link
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Link and Copy Type Comparison (Restrictions)](#link-and-copy-type-comparison-restrictions)
 - [Source Code](#source-code)
 - [License](#license)
 
@@ -62,6 +63,17 @@ It works for both files and folders, giving you full control over where the link
 5.  The operation will be executed immediately, and a success or error message will be displayed.
 
 > **Note:** Directory Junctions act like hard links for folders. Deleting any type of link or Copy-on-Write clone **does not** delete or affect the original files/folders. Copy-on-Write clones are real, independent copies on disk that share physical data blocks at the file system level until modified.
+
+[Return to Top](#table-of-contents)
+
+## Link and Copy Type Comparison (Restrictions)
+
+| Link / Copy Type | Same Drive Only? | Breaks if Original is Deleted? | Edits Sync Together? | Windows Command Examples (CMD / PowerShell) |
+| --- | --- | --- | --- | --- |
+| **Directory Junction** (`/J`) | No (Can cross drives, folders only) | Yes (Becomes a broken folder link) | Yes (Modifications inside the folder affect original) | `mklink /J "D:\Target" "C:\Source"` |
+| **Hard Link** (`/H`) | Yes (Strictly same NTFS partition) | No (File stays alive under the new path) | Yes (Both paths point to the exact same data) | `mklink /H "C:\Target\AGENTS.md" "C:\Source\AGENTS.md"` |
+| **Symbolic Link** (Symlink) | No (Works across different drives) | Yes (Becomes a broken shortcut) | Yes (Modifying the link changes the original file) | `mklink "D:\Target\AGENTS.md" "C:\Source\AGENTS.md"` |
+| **CoW Clone** (Block Clone) | Yes (Strictly same ReFS / Dev Drive) | No (Acts as an independent copy) | No (Edits remain isolated to each file) | `Copy-Item -Path "C:\Src\AGENTS.md" -Destination "C:\Dst\AGENTS.md"` |
 
 [Return to Top](#table-of-contents)
 
