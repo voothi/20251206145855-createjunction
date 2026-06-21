@@ -85,7 +85,7 @@ An automated test suite is available under the `tests/` directory to verify the 
 
 To run the tests, execute the following command in PowerShell from the repository root:
 ```powershell
-powershell -File tests/test.ps1
+powershell -ExecutionPolicy Bypass -File tests/test.ps1
 ```
 
 The test suite will prepare a temporary sandbox, run operations non-interactively using automated inputs, validate the output structures (including hard link shared filesystem index validation), and clean up afterwards.
