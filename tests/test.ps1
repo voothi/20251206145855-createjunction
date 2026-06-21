@@ -250,6 +250,17 @@ try {
         Assert-True ($item.LinkType -eq "Junction") "Target LinkType is Junction"
     }
 
+    # ----------------------------------------------------
+    # Test Case 10: Elevated Operation Tests
+    # ----------------------------------------------------
+    if ($env:RUN_ELEVATED -ne "1") {
+        Write-Host "  [SKIP] Elevated operation tests skipped. Set `$env:RUN_ELEVATED = '1' to run them." -ForegroundColor Yellow
+    } else {
+        $elevatedTestScript = Join-Path $PSScriptRoot "test_elevated_u.ps1"
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$elevatedTestScript"
+        Assert-True ($LASTEXITCODE -eq 0) "Elevated operation tests completed with exit code 0"
+    }
+
 } finally {
     $env:TEST_MODE = $null
     Teardown-Sandbox
