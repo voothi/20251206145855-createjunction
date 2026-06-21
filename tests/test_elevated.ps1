@@ -58,8 +58,39 @@ try {
         Write-Host "  [FAIL] Directory Symbolic Link creation failed (ExitCode: $($proc2.ExitCode))" -ForegroundColor Red
     }
 
+    # Test 3: Self-Escalation (Triggered internally by the script when run non-elevated)
+    Write-Host "`n[Test 3] Creating Directory Symbolic Link via Self-Escalation..." -ForegroundColor Yellow
+    $srcSelfEscalate = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceSelfEscalate")
+    $dstSelfEscalate = Join-Path $Sandbox "TargetSelfEscalate"
+    
+    # Set TEST_MODE to 2 to allow self-escalation but bypass interactive pauses.
+    $argStr3 = "/c `"set TEST_MODE=2&& `"$CreatorScript`" `"$srcSelfEscalate`" `"$dstSelfEscalate`" 2`""
+    $stdoutLog = Join-Path $Sandbox "test3_stdout.log"
+    $stderrLog = Join-Path $Sandbox "test3_stderr.log"
+    $proc3 = Start-Process cmd.exe -ArgumentList $argStr3 -PassThru -Wait -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
+    
+    $sePassed = $false
+    if ($proc3.ExitCode -eq 0 -and (Test-Path $dstSelfEscalate)) {
+        $item = Get-Item $dstSelfEscalate
+        if ($item.LinkType -eq "SymbolicLink") {
+            Write-Host "  [PASS] Self-escalated Directory Symbolic Link created successfully!" -ForegroundColor Green
+            $sePassed = $true
+        }
+    }
+    if (-not $sePassed) {
+        Write-Host "  [FAIL] Self-escalation Symbolic Link creation failed (ExitCode: $($proc3.ExitCode))" -ForegroundColor Red
+        if (Test-Path $stdoutLog) {
+            Write-Host "--- STDOUT ---" -ForegroundColor Gray
+            Get-Content $stdoutLog
+        }
+        if (Test-Path $stderrLog) {
+            Write-Host "--- STDERR ---" -ForegroundColor Gray
+            Get-Content $stderrLog
+        }
+    }
+
     Write-Host "`n=======================================================" -ForegroundColor Cyan
-    if ($jPassed -and $sPassed) {
+    if ($jPassed -and $sPassed -and $sePassed) {
         Write-Host "ALL ELEVATION TESTS PASSED SUCCESSFULLY!" -ForegroundColor Green
     } else {
         Write-Host "SOME ELEVATION TESTS FAILED." -ForegroundColor Red

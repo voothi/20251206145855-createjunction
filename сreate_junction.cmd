@@ -281,8 +281,12 @@ try {
     $isAccessError = ($_.Exception -is [System.UnauthorizedAccessException]) -or 
                      ($_.Exception.Message -like "*access*") -or 
                      ($_.Exception.Message -like "*denied*") -or
+                     ($_.Exception.Message -like "*privilege*") -or
+                     ($_.Exception.Message -like "*sufficient*") -or
                      ($_.Exception.InnerException.Message -like "*access*") -or
-                     ($_.Exception.InnerException.Message -like "*denied*")
+                     ($_.Exception.InnerException.Message -like "*denied*") -or
+                     ($_.Exception.InnerException.Message -like "*privilege*") -or
+                     ($_.Exception.InnerException.Message -like "*sufficient*")
     
     if (-not $isAdmin -and $isAccessError -and $env:TEST_MODE -ne "1") {
         Write-Host "`n[INFO] Access denied. Requesting administrative privileges..." -ForegroundColor Yellow
@@ -305,7 +309,7 @@ try {
     }
 }
 
-if ($env:TEST_MODE -ne "1") {
+if ([string]::IsNullOrEmpty($env:TEST_MODE)) {
     if ($IsRelaunched -and $OperationSuccess) {
         # Exit immediately for elevated process on success
     } else {
