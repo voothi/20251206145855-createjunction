@@ -233,6 +233,7 @@ Write-Host "FROM: `"$LinkPath`""
 Write-Host "TO:   `"$SourcePath`""
 Write-Host "-------------------------------------------------------"
 
+$OperationSuccess = $false
 try {
     if ($Choice -eq "3") {
         # Lazy compile the C# P/Invoke helper
@@ -250,6 +251,7 @@ try {
                 [BlockClone]::CloneFile($SourcePath, $LinkPath)
             }
             Write-Host "`n[SUCCESS] Copy-on-Write Clone created successfully!" -ForegroundColor Green
+            $OperationSuccess = $true
         } catch {
             if ($createdTarget -and (Test-Path $LinkPath)) {
                 Remove-Item $LinkPath -Recurse -Force | Out-Null
@@ -271,6 +273,7 @@ try {
             }
         }
         Write-Host "`n[SUCCESS] Link created successfully!" -ForegroundColor Green
+        $OperationSuccess = $true
     }
 } catch {
     $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -295,6 +298,11 @@ try {
 }
 
 if ($env:TEST_MODE -ne "1") {
-    Write-Host "`nPress Enter to close..."
-    [void](Read-Host)
+    if ($IsRelaunched -and $OperationSuccess) {
+        Write-Host "`nClosing automatically in 2 seconds..." -ForegroundColor Gray
+        Start-Sleep -Seconds 2
+    } else {
+        Write-Host "`nPress Enter to close..."
+        [void](Read-Host)
+    }
 }
