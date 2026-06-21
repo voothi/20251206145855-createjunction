@@ -283,7 +283,7 @@ try {
     if (-not $isAdmin -and $isAccessError -and $env:TEST_MODE -ne "1") {
         Write-Host "`n[INFO] Access denied. Requesting administrative privileges..." -ForegroundColor Yellow
         try {
-            Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$env:SCRIPT_PATH`" `"$SourcePath`" `"$LinkPath`" $Choice" -Verb RunAs -ErrorAction Stop
+            Start-Process -FilePath "$env:SCRIPT_PATH" -ArgumentList $SourcePath, $LinkPath, $Choice -Verb RunAs -ErrorAction Stop
             exit 0
         } catch {
             Write-Host "`n[ERROR] Failed to elevate: $($_.Exception.Message)" -ForegroundColor Red
