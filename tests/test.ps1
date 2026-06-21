@@ -64,14 +64,14 @@ function Assert-True($condition, $message) {
     }
 }
 
-function Setup-Sandbox {
+function Initialize-Sandbox {
     if (Test-Path $Sandbox) {
         Remove-Item $Sandbox -Recurse -Force | Out-Null
     }
     New-Item -ItemType Directory -Path $Sandbox | Out-Null
 }
 
-function Teardown-Sandbox {
+function Remove-Sandbox {
     if (Test-Path $Sandbox) {
         Remove-Item $Sandbox -Recurse -Force | Out-Null
     }
@@ -86,7 +86,7 @@ try {
     # ----------------------------------------------------
     # Test Case 1: Directory Junction (Folder Option 1)
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 1: Directory Junction" -ForegroundColor Yellow
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
     $dst = Join-Path $Sandbox "TargetJunction"
@@ -105,7 +105,7 @@ try {
     # ----------------------------------------------------
     # Test Case 2: Directory Symbolic Link (Folder Option 2)
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 2: Directory Symbolic Link" -ForegroundColor Yellow
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
     $dst = Join-Path $Sandbox "TargetSymlinkDir"
@@ -127,7 +127,7 @@ try {
     # ----------------------------------------------------
     # Test Case 3: File Symbolic Link (File Option 1)
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 3: File Symbolic Link" -ForegroundColor Yellow
     $src = Join-Path $Sandbox "SourceFile.txt"
     Set-Content -Path $src -Value "File Content"
@@ -150,7 +150,7 @@ try {
     # ----------------------------------------------------
     # Test Case 4: File Hard Link (File Option 2)
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 4: File Hard Link" -ForegroundColor Yellow
     $src = Join-Path $Sandbox "SourceFile.txt"
     Set-Content -Path $src -Value "Hello Hardlink"
@@ -169,7 +169,7 @@ try {
     # ----------------------------------------------------
     # Test Case 5: File Copy-on-Write Clone Failure on NTFS (File Option 3)
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 5: File CoW Clone NTFS error handling" -ForegroundColor Yellow
     $src = Join-Path $Sandbox "SourceFile.txt"
     Set-Content -Path $src -Value "Hello CoW"
@@ -185,7 +185,7 @@ try {
     # ----------------------------------------------------
     # Test Case 6: Target Path Already Exists Validation
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 6: Target path already exists validation" -ForegroundColor Yellow
     $src = Join-Path $Sandbox "SourceFile.txt"
     Set-Content -Path $src -Value "Hello Source"
@@ -205,7 +205,7 @@ try {
     # ----------------------------------------------------
     # Test Case 7: Direct Argument Invocation (Junction)
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 7: Direct Argument Invocation (Junction)" -ForegroundColor Yellow
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
     $dst = Join-Path $Sandbox "TargetJunctionArgs"
@@ -223,7 +223,7 @@ try {
     # ----------------------------------------------------
     # Test Case 8: Direct Argument Invocation with Spaces
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 8: Direct Argument Invocation with Spaces" -ForegroundColor Yellow
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "Source Folder Spaces")
     $dst = Join-Path $Sandbox "Target Junction Spaces"
@@ -241,7 +241,7 @@ try {
     # ----------------------------------------------------
     # Test Case 9: Interactive Input with Surrounding Quotes
     # ----------------------------------------------------
-    Setup-Sandbox
+    Initialize-Sandbox
     Write-Host "`nTest Case 9: Interactive Input with Surrounding Quotes" -ForegroundColor Yellow
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
     $dst = Join-Path $Sandbox "TargetJunctionQuotes"
@@ -269,7 +269,7 @@ try {
 
 } finally {
     $env:TEST_MODE = $null
-    Teardown-Sandbox
+    Remove-Sandbox
 }
 
 Write-Host "`n=======================================================" -ForegroundColor Cyan
