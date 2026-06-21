@@ -58,8 +58,7 @@ function Assert-True($condition, $message) {
     if ($condition) {
         Write-Host "  [PASS] $message" -ForegroundColor Green
         $global:testsPassed++
-    }
-    else {
+    } else {
         Write-Host "  [FAIL] $message" -ForegroundColor Red
         $global:testsFailed++
     }
@@ -116,8 +115,7 @@ try {
     
     if ($output -match "privilege" -or $output -match "sufficient") {
         Write-Host "  [SKIP] Directory Symlink skipped due to privilege restrictions." -ForegroundColor Yellow
-    }
-    else {
+    } else {
         Assert-True (Test-Path $dst) "Target path exists"
         if (Test-Path $dst) {
             $item = Get-Item $dst
@@ -140,8 +138,7 @@ try {
     
     if ($output -match "privilege" -or $output -match "sufficient") {
         Write-Host "  [SKIP] File Symlink skipped due to privilege restrictions." -ForegroundColor Yellow
-    }
-    else {
+    } else {
         Assert-True (Test-Path $dst) "Target path exists"
         if (Test-Path $dst) {
             $item = Get-Item $dst
@@ -205,24 +202,23 @@ try {
     Assert-True ($output -match "already exists") "Validation blocks creation on existing path"
     Assert-True (Test-Path $dummy) "Target path successfully falls back to new location"
 
-}
-finally {
-    $env:TEST_MODE = $null
-    Teardown-Sandbox
-}
-
-Write-Host "`n=======================================================" -ForegroundColor Cyan
-Write-Host "TEST SUMMARY" -ForegroundColor Cyan
-Write-Host "=======================================================" -ForegroundColor Cyan
-Write-Host "Passed: $testsPassed" -ForegroundColor Green
-if ($testsFailed -gt 0) {
-    Write-Host "Failed: $testsFailed" -ForegroundColor Red
-    exit 1
-}
-else {
-    Write-Host "All run tests passed successfully!" -ForegroundColor Green
-    exit 0
-}
+    # ----------------------------------------------------
+    # Test Case 7: Direct Argument Invocation (Junction)
+    # ----------------------------------------------------
+    Setup-Sandbox
+    Write-Host "`nTest Case 7: Direct Argument Invocation (Junction)" -ForegroundColor Yellow
+    $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
+    $dst = Join-Path $Sandbox "TargetJunctionArgs"
+    
+    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1`"
+    $exitCode = $LASTEXITCODE
+    
+    Assert-True ($exitCode -eq 0) "Script exits with code 0"
+    Assert-True (Test-Path $dst) "Target path exists"
+    if (Test-Path $dst) {
+        $item = Get-Item $dst
+        Assert-True ($item.LinkType -eq "Junction") "Target LinkType is Junction"
+    }
 
     # ----------------------------------------------------
     # Test Case 8: Direct Argument Invocation with Spaces
@@ -266,7 +262,7 @@ else {
     if ($env:RUN_ELEVATED -ne "1") {
         Write-Host "  [SKIP] Elevated operation tests skipped. Set `$env:RUN_ELEVATED = '1' to run them." -ForegroundColor Yellow
     } else {
-        $elevatedTestScript = Join-Path $PSScriptRoot "test_elevated_u.ps1"
+        $elevatedTestScript = Join-Path $PSScriptRoot "test_elevated.ps1"
         powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$elevatedTestScript"
         Assert-True ($LASTEXITCODE -eq 0) "Elevated operation tests completed with exit code 0"
     }
