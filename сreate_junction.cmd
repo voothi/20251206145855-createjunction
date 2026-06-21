@@ -287,7 +287,7 @@ try {
     if (-not $isAdmin -and $isAccessError -and $env:TEST_MODE -ne "1") {
         Write-Host "`n[INFO] Access denied. Requesting administrative privileges..." -ForegroundColor Yellow
         try {
-            $argStr = "/c `"`"`$env:SCRIPT_PATH`" `"`$SourcePath`" `"`$LinkPath`" `$Choice`"`""
+            $argStr = "/c `"`"$env:SCRIPT_PATH`" `"$SourcePath`" `"$LinkPath`" $Choice`""
             $proc = Start-Process -FilePath "cmd.exe" -ArgumentList $argStr -Verb RunAs -PassThru -Wait -ErrorAction Stop
             if ($proc.ExitCode -eq 0) {
                 Write-Host "`n[SUCCESS] Link created successfully (elevated)!" -ForegroundColor Green
