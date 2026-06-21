@@ -141,6 +141,7 @@ if (-not [string]::IsNullOrEmpty($env:DEST_PATH) -and -not [string]::IsNullOrEmp
     $LinkPath = $env:DEST_PATH
     $Choice = $env:CHOICE
     $IsRelaunched = $true
+    Out-File -FilePath "$env:TEMP\create_junction_debug.log" -InputObject "ELEVATED RUN: SRC='$SourcePath' DEST='$LinkPath' CHOICE='$Choice'" -Append
 }
 
 if (-not $IsRelaunched) {
@@ -286,7 +287,8 @@ try {
     if (-not $isAdmin -and $isAccessError -and $env:TEST_MODE -ne "1") {
         Write-Host "`n[INFO] Access denied. Requesting administrative privileges..." -ForegroundColor Yellow
         try {
-            $proc = Start-Process -FilePath "$env:SCRIPT_PATH" -ArgumentList "`"$SourcePath`"", "`"$LinkPath`"", $Choice -Verb RunAs -PassThru -Wait -ErrorAction Stop
+            $argStr = "/c `"`"`$env:SCRIPT_PATH`" `"`$SourcePath`" `"`$LinkPath`" `$Choice`"`""
+            $proc = Start-Process -FilePath "cmd.exe" -ArgumentList $argStr -Verb RunAs -PassThru -Wait -ErrorAction Stop
             if ($proc.ExitCode -eq 0) {
                 Write-Host "`n[SUCCESS] Link created successfully (elevated)!" -ForegroundColor Green
                 $OperationSuccess = $true
@@ -299,6 +301,7 @@ try {
     } else {
         Write-Host "`n[ERROR] Failed to perform the operation." -ForegroundColor Red
         Write-Host "$($_.Exception.Message)" -ForegroundColor Red
+        Out-File -FilePath "$env:TEMP\create_junction_debug.log" -InputObject "ERROR: $($_.Exception.Message)" -Append
     }
 }
 
@@ -310,6 +313,7 @@ if ($env:TEST_MODE -ne "1") {
         [void](Read-Host)
     }
 }
+
 
 if (-not $OperationSuccess) {
     exit 1
