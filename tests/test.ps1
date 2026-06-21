@@ -204,7 +204,7 @@ try {
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
     $dst = Join-Path $Sandbox "TargetJunctionArgs"
     
-    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1``"
+    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1`"
     $exitCode = $LASTEXITCODE
     
     Assert-True ($exitCode -eq 0) "Script exits with code 0"
@@ -222,7 +222,7 @@ try {
     $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "Source Folder Spaces")
     $dst = Join-Path $Sandbox "Target Junction Spaces"
     
-    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1``"
+    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1`"
     $exitCode = $LASTEXITCODE
     
     Assert-True ($exitCode -eq 0) "Script exits with code 0 for path with spaces"
