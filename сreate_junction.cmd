@@ -4,9 +4,9 @@ set "SRC_PATH=%~1"
 set "DEST_PATH=%~2"
 set "CHOICE=%~3"
 set "SCRIPT_PATH=%~f0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -LiteralPath '%~f0' | Select-Object -Skip 9 | Out-String | Invoke-Expression"
-endlocal
-exit /b
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -LiteralPath '%~f0' | Select-Object -Skip 10 | Out-String | Invoke-Expression"
+set "EXIT_CODE=%ERRORLEVEL%"
+endlocal & exit /b %EXIT_CODE%
 
 # PowerShell Code Starts Here
 $SourcePath = $env:SRC_PATH
@@ -286,8 +286,13 @@ try {
     if (-not $isAdmin -and $isAccessError -and $env:TEST_MODE -ne "1") {
         Write-Host "`n[INFO] Access denied. Requesting administrative privileges..." -ForegroundColor Yellow
         try {
-            Start-Process -FilePath "$env:SCRIPT_PATH" -ArgumentList $SourcePath, $LinkPath, $Choice -Verb RunAs -ErrorAction Stop
-            exit 0
+            $proc = Start-Process -FilePath "$env:SCRIPT_PATH" -ArgumentList $SourcePath, $LinkPath, $Choice -Verb RunAs -PassThru -Wait -ErrorAction Stop
+            if ($proc.ExitCode -eq 0) {
+                Write-Host "`n[SUCCESS] Link created successfully (elevated)!" -ForegroundColor Green
+                $OperationSuccess = $true
+            } else {
+                Write-Host "`n[ERROR] Elevated operation failed." -ForegroundColor Red
+            }
         } catch {
             Write-Host "`n[ERROR] Failed to elevate: $($_.Exception.Message)" -ForegroundColor Red
         }
@@ -299,10 +304,13 @@ try {
 
 if ($env:TEST_MODE -ne "1") {
     if ($IsRelaunched -and $OperationSuccess) {
-        Write-Host "`nClosing automatically in 2 seconds..." -ForegroundColor Gray
-        Start-Sleep -Seconds 2
+        # Exit immediately for elevated process on success
     } else {
         Write-Host "`nPress Enter to close..."
         [void](Read-Host)
     }
+}
+
+if (-not $OperationSuccess) {
+    exit 1
 }

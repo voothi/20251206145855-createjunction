@@ -196,6 +196,59 @@ try {
     $output = $inputs | cmd.exe /c `"`"$CreatorScript`" `"$src`"`" 2>&1 | Out-String
     Assert-True ($output -match "already exists") "Validation blocks creation on existing path"
     Assert-True (Test-Path $dummy) "Target path successfully falls back to new location"
+    # ----------------------------------------------------
+    # Test Case 7: Direct Argument Invocation (Junction)
+    # ----------------------------------------------------
+    Setup-Sandbox
+    Write-Host "`nTest Case 7: Direct Argument Invocation (Junction)" -ForegroundColor Yellow
+    $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
+    $dst = Join-Path $Sandbox "TargetJunctionArgs"
+    
+    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1``"
+    $exitCode = $LASTEXITCODE
+    
+    Assert-True ($exitCode -eq 0) "Script exits with code 0"
+    Assert-True (Test-Path $dst) "Target path exists"
+    if (Test-Path $dst) {
+        $item = Get-Item $dst
+        Assert-True ($item.LinkType -eq "Junction") "Target LinkType is Junction"
+    }
+
+    # ----------------------------------------------------
+    # Test Case 8: Direct Argument Invocation with Spaces
+    # ----------------------------------------------------
+    Setup-Sandbox
+    Write-Host "`nTest Case 8: Direct Argument Invocation with Spaces" -ForegroundColor Yellow
+    $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "Source Folder Spaces")
+    $dst = Join-Path $Sandbox "Target Junction Spaces"
+    
+    cmd.exe /c `"`"$CreatorScript`" `"$src`" `"$dst`" 1``"
+    $exitCode = $LASTEXITCODE
+    
+    Assert-True ($exitCode -eq 0) "Script exits with code 0 for path with spaces"
+    Assert-True (Test-Path $dst) "Target path with spaces exists"
+    if (Test-Path $dst) {
+        $item = Get-Item $dst
+        Assert-True ($item.LinkType -eq "Junction") "Target LinkType is Junction"
+    }
+
+    # ----------------------------------------------------
+    # Test Case 9: Interactive Input with Surrounding Quotes
+    # ----------------------------------------------------
+    Setup-Sandbox
+    Write-Host "`nTest Case 9: Interactive Input with Surrounding Quotes" -ForegroundColor Yellow
+    $src = New-Item -ItemType Directory -Path (Join-Path $Sandbox "SourceFolder")
+    $dst = Join-Path $Sandbox "TargetJunctionQuotes"
+    
+    # Input with explicit surrounding double quotes
+    $inputs = "`"$dst`"`n1`n"
+    $inputs | cmd.exe /c `"`"$CreatorScript`" `"$src`"`" | Out-Null
+    
+    Assert-True (Test-Path $dst) "Target path with surrounding quotes is resolved"
+    if (Test-Path $dst) {
+        $item = Get-Item $dst
+        Assert-True ($item.LinkType -eq "Junction") "Target LinkType is Junction"
+    }
 
 } finally {
     $env:TEST_MODE = $null
