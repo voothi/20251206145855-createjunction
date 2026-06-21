@@ -23,7 +23,7 @@ It works for both files and folders, giving you full control over where the link
 *   **Support for Files and Folders:** Works seamlessly for both file inputs and folder inputs.
 *   **Multiple Link Types:**
     *   **Directory Junctions:** Standard junctions (`mklink /J`) for folders.
-    *   **Symbolic Links:** Soft links for files or folders (`mklink`/`mklink /D`). (Requires Developer Mode or Administrator privileges).
+    *   **Symbolic Links:** Soft links for files or folders (`mklink`/`mklink /D`). (Requires Developer Mode, automatically prompts for Administrator privileges if needed).
     *   **Hard Links:** Hard links for files (`mklink /H`).
     *   **Copy-on-Write (CoW) Clones:** Hardware-accelerated file duplication (block cloning) on ReFS and Dev Drive volumes using raw Windows file systems APIs. (Recursively copies and clones directories if selected on folders).
 *   **Hybrid Input:**
@@ -33,6 +33,7 @@ It works for both files and folders, giving you full control over where the link
 *   **Smart Validation:** Checks if the parent folder exists and prevents overwriting existing files/folders.
 *   **Safety Loops:** If you cancel the selection or make a mistake, the script loops back instead of closing, allowing you to try again.
 *   **Clean Input:** Automatically trims accidental leading spaces from pasted paths.
+*   **Auto-Elevation:** Automatically requests Administrator privileges via UAC if required (e.g. for creating Symbolic Links without Developer Mode).
 
 ## Installation
 
